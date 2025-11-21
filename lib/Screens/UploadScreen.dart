@@ -12,37 +12,6 @@ class UploadPage extends StatefulWidget {
 
 class _UploadPageState extends State<UploadPage> {
   final storage = StorageService();
-  File? selectedFile;
-  String? uploadedUrl;
-
-  // ⭐ pick & upload function
-  Future<void> pickAndUploadFile() async {
-    // Pick file
-    File? file = await storage.pickFile();
-    if (file == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No file selected")),
-      );
-      return;
-    }
-
-    setState(() => selectedFile = file);
-
-    // Upload file
-    String? url = await storage.uploadFile(file, "uploads");
-
-    if (url != null) {
-      setState(() => uploadedUrl = url);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Uploaded Successfully!")),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Upload failed")),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,15 +21,10 @@ class _UploadPageState extends State<UploadPage> {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(
-              color: Colors.blue,
-              width: 1,
-              style: BorderStyle.solid,
-            ),
+            border: Border.all(color: Colors.blue, width: 1),
             borderRadius: BorderRadius.circular(29),
             boxShadow: [
               BoxShadow(
-                blurStyle: BlurStyle.outer,
                 blurRadius: 20,
                 color: Colors.white,
               ),
@@ -88,16 +52,13 @@ class _UploadPageState extends State<UploadPage> {
                 ),
                 const SizedBox(height: 30),
 
-                // Upload box
+                // Upload icon box
                 Container(
                   height: 180,
                   width: 280,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.blue.shade300,
-                      width: 2,
-                    ),
+                    border: Border.all(color: Colors.blue.shade300, width: 2),
                   ),
                   child: Center(
                     child: Icon(
@@ -110,7 +71,7 @@ class _UploadPageState extends State<UploadPage> {
 
                 const SizedBox(height: 30),
 
-                // Browse files button
+                // Browse Files
                 Container(
                   width: 280,
                   height: 55,
@@ -119,7 +80,7 @@ class _UploadPageState extends State<UploadPage> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: TextButton(
-                    onPressed: pickAndUploadFile,
+                    onPressed: () => showUploadBottomSheet(context),
                     child: const Text(
                       "Browse Files",
                       style: TextStyle(color: Colors.white, fontSize: 22),
@@ -137,8 +98,6 @@ class _UploadPageState extends State<UploadPage> {
                     uploadWidget(FontAwesomeIcons.image),
                   ],
                 ),
-
-                const SizedBox(height: 15),
               ],
             ),
           ),
@@ -148,24 +107,190 @@ class _UploadPageState extends State<UploadPage> {
   }
 }
 
-// BorderStyle function
-BorderSide _dashBorder() {
-  return BorderSide(
-    color: Colors.blue.shade300,
-    width: 2,
-    style: BorderStyle.solid,
+//
+// ⭐ BOTTOM SHEET FUNCTION (FIXED)
+//
+Future<void> showUploadBottomSheet(BuildContext context) async {
+  TextEditingController titleController = TextEditingController();
+  File? pickedFile;
+  String selectedCourse = "BCA";
+
+  final storage = StorageService();
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+    ),
+    builder: (context) {
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 20,
+          right: 20,
+          top: 25,
+        ),
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "Contribute to the Community",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      color: Colors.blue.shade900,
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // TITLE
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      labelText: "Enter Title",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  // ⭐ COURSE SELECTION BUTTONS
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      courseButton("BCA", selectedCourse, () {
+                        setState(() => selectedCourse = "BCA");
+                      }),
+                      courseButton("BBA", selectedCourse, () {
+                        setState(() => selectedCourse = "BBA");
+                      }),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // File Picker
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      File? file = await storage.pickFile();
+                      if (file != null) {
+                        setState(() => pickedFile = file);
+                      }
+                    },
+                    icon: const Icon(Icons.upload_file, color: Colors.white),
+                    label: Text(
+                      pickedFile == null ? "Choose File" : "File Selected",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade500,
+                    ),
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  // Submit Button
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (titleController.text.isEmpty || pickedFile == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("Please complete all fields")),
+                        );
+                        return;
+                      }
+
+                      // 1️⃣ Upload file
+                      String? url =
+                          await storage.uploadFile(pickedFile!, "uploads");
+
+                      if (url == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Upload failed")),
+                        );
+                        return;
+                      }
+
+                      // 2️⃣ Save to database
+                      final success = await storage.saveNote(
+                        titleController.text.trim(),
+                        selectedCourse,
+                        url,
+                      );
+
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("Uploaded Successfully")),
+                        );
+                        Navigator.pop(context);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("Database save failed")),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade800,
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    child: const Text(
+                      "Submit",
+                      style: TextStyle(fontSize: 21, color: Colors.white),
+                    ),
+                  ),
+
+                  const SizedBox(height: 45),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    },
   );
 }
 
-// Circular icon widget
+//
+// ⭐ course selection button
+//
+Widget courseButton(String text, String selected, VoidCallback onTap) {
+  final bool isActive = text == selected;
+
+  return ElevatedButton(
+    onPressed: onTap,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: isActive ? Colors.blue.shade800 : Colors.blue.shade100,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(
+        color: isActive ? Colors.white : Colors.black87,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  );
+}
+
+//
+// ⭐ Circular icon widget
+//
 Widget uploadWidget(IconData icon) {
   return Container(
     decoration: BoxDecoration(
       shape: BoxShape.circle,
-      border: Border.all(
-        color: Colors.blue.shade800,
-        width: 2,
-      ),
+      border: Border.all(color: Colors.blue.shade800, width: 2),
     ),
     child: CircleAvatar(
       radius: 33,

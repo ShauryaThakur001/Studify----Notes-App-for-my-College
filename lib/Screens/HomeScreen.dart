@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:studify/Screens/AuthGate.dart';
+import 'package:studify/Services/Supabase_Storage_Service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,6 +13,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final storage = StorageService();
+
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -28,14 +32,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    List<Map<String, String>> notes = [
-      {"title": "BCA", "date": "20-12-2025"},
-      {"title": "BBA", "date": "08-08-2025"},
-      {"title": "BCA", "date": "10-02-2024"},
-      {"title": "BBA", "date": "25-01-2023"},
-      {"title": "DTP", "date": "10-01-2023"},
-    ];
-
     return Scaffold(
       backgroundColor: Colors.blue.shade100,
 
@@ -51,23 +47,15 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: IconButton(
-              icon: Icon(
-                Icons.logout,
-                color: Colors.blue.shade700,
-                size: 28,
-              ),
-              onPressed: SignOut,
-            ),
+          IconButton(
+            icon: Icon(Icons.logout, color: Colors.blue.shade700, size: 28),
+            onPressed: SignOut,
           ),
         ],
       ),
 
       body: Padding(
         padding: const EdgeInsets.all(22.0),
-
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +63,7 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 15),
 
-              // ⭐ NEWS SECTION
+              /// ⭐ NEWS SECTION
               Text(
                 "News",
                 style: TextStyle(
@@ -107,7 +95,9 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Text("📢 New Notes Uploaded!", style: TextStyle(fontSize: 19)),
                     SizedBox(height: 10),
-                    Text("New question papers and notes for BCA & DTP are now available."),
+                    Text(
+                      "New question papers and notes for BCA & DTP are now available.",
+                    ),
                   ],
                 ),
               ),
@@ -116,7 +106,7 @@ class _HomePageState extends State<HomePage> {
               Divider(color: Colors.white),
               const SizedBox(height: 20),
 
-              // ⭐ RECENT NOTES
+              /// ⭐ RECENT NOTES
               Text(
                 "Recent Notes",
                 style: TextStyle(
@@ -128,18 +118,50 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 20),
 
-              // ⭐ FIXED — NO LISTVIEW INSIDE SCROLLVIEW
-              Column(
-                children: List.generate(notes.length, (index) {
-                  final note = notes[index];
-                  return containerWidget(
-                    title: note["title"]!,
-                    date: note["date"]!,
-                    onOpen: () {},
+              /// ⭐ LOAD FILES FROM SUPABASE STORAGE
+              FutureBuilder(
+                future: storage.fetchNotes(), // your folder in bucket
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.blue,
+                      ),
+                    );
+                  }
+
+                  final files = snapshot.data!;
+
+                  if (files.isEmpty) {
+                    return Center(
+                      child: Text(
+                        "No files uploaded yet.",
+                        style: TextStyle(color: Colors.blue.shade900, fontSize: 18),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: files.map((file) {
+                      return containerWidget(
+                        title: file["title"],
+                        date: file["course"],
+                        onOpen: () async {
+                          final url = file["url"];
+                          final Uri uri = Uri.parse(url);
+
+                          if (!await launchUrl(uri,
+                              mode: LaunchMode.externalApplication)) {
+                            print("Could not open file");
+                          }
+                        },
+                      );
+                    }).toList(),
                   );
-                }),
+                },
               ),
-              
+
+              const SizedBox(height: 50),
             ],
           ),
         ),
@@ -148,7 +170,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// ⭐ BEAUTIFUL NOTE CARD
+/// ⭐ BEAUTIFUL NOTE / FILE CARD
 Widget containerWidget({
   required String title,
   required String date,
@@ -169,9 +191,11 @@ Widget containerWidget({
         ),
       ],
     ),
+
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        /// Title (Filename)
         Text(
           title,
           style: TextStyle(
@@ -183,12 +207,16 @@ Widget containerWidget({
 
         const SizedBox(height: 8),
 
+        /// Date + Open Button
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               date,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade700,
+              ),
             ),
 
             ElevatedButton.icon(
@@ -200,9 +228,8 @@ Widget containerWidget({
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               ),
-            )
+            ),
           ],
         ),
       ],

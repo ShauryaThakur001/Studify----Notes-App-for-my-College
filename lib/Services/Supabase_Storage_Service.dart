@@ -5,10 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class StorageService {
   final SupabaseClient _client = Supabase.instance.client;
 
-  /// Pick ANY file (pdf, image, doc, video, etc.)
+  /// Pick ANY file
   Future<File?> pickFile() async {
     final result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
       withData: false,
     );
 
@@ -17,26 +16,21 @@ class StorageService {
   }
 
   /// Upload file to Supabase Storage
-  /// folderName = bucket/folder path (ex: "notes", "uploads")
   Future<String?> uploadFile(File file, String folderName) async {
     try {
-      // create unique filename
       final fileName =
           "${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}";
 
       final filePath = "$folderName/$fileName";
 
-      // Upload to Supabase storage
       final response = await _client.storage
-          .from('studifybucket') // replace with your bucket name
+          .from('studifybucket')
           .upload(filePath, file);
 
       if (response.isEmpty) return null;
 
-      // Get public URL
-      final publicUrl = _client.storage
-          .from('studifybucket') // same bucket
-          .getPublicUrl(filePath);
+      final publicUrl =
+          _client.storage.from('studifybucket').getPublicUrl(filePath);
 
       return publicUrl;
     } catch (e) {
@@ -45,13 +39,52 @@ class StorageService {
     }
   }
 
-  /// delete file from Supabase Storage
-  Future<bool> deleteFile(String path) async {
+  /// Fetch notes from Supabase
+  Future<List<Map<String, dynamic>>> fetchNotes() async {
     try {
-      await _client.storage.from('studifybucket').remove([path]);
+      final response = await _client
+          .from("notes")
+          .select()
+          .order("created_at", ascending: false);
+
+      return response.map<Map<String, dynamic>>((note) {
+        return {
+          "id": note["id"], // FIXED
+          "title": note["title"],
+          "course": note["course"],
+          "file_url": note["file_url"],
+          "created_at": note["created_at"],
+        };
+      }).toList();
+    } catch (e) {
+      print("Error fetching notes: $e");
+      return [];
+    }
+  }
+
+  /// Delete note by ID
+  Future<bool> deleteNote(int id) async {
+    try {
+      await _client.from("notes").delete().eq("id", id);
       return true;
     } catch (e) {
-      print("Delete Error: $e");
+      print("Delete note error: $e");
+      return false;
+    }
+  }
+
+  /// Save note in Database
+  Future<bool> saveNote(String title, String course, String fileUrl) async {
+    try {
+      await _client.from("notes").insert({
+        "title": title,
+        "course": course,
+        "file_url": fileUrl,
+      });
+
+      return true;
+    } catch (e) {
+      print("Save note error: $e");
       return false;
     }
   }
