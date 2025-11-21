@@ -1,9 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:studify/Screens/DeveloperScreen.dart';
-import 'package:studify/Screens/HomeScreen.dart';
-import 'package:studify/Screens/LoginScreen.dart';
-import 'package:studify/Screens/Root.dart';
 import 'package:studify/Screens/SplashScreen.dart';
 import 'package:studify/firebase_options.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

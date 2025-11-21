@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:studify/Screens/AuthGate.dart';
-import 'package:studify/Screens/LoginScreen.dart';
-import 'package:studify/Screens/Root.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
