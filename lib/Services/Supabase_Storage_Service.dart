@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StorageService {
@@ -49,7 +48,7 @@ class StorageService {
 
       return response.map<Map<String, dynamic>>((note) {
         return {
-          "id": note["id"], // FIXED
+          "id": note["id"], // FIXE
           "title": note["title"],
           "course": note["course"],
           "file_url": note["file_url"],
