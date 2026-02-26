@@ -48,7 +48,7 @@ class StorageService {
 
       return response.map<Map<String, dynamic>>((note) {
         return {
-          "id": note["id"], // FIXE
+          "id": note["id"], 
           "title": note["title"],
           "course": note["course"],
           "file_url": note["file_url"],
